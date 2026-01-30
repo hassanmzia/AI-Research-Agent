@@ -22,7 +22,7 @@ const compression = require('compression');
 const url = require('url');
 
 // Configuration
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3046;
 const BACKEND_URL = process.env.BACKEND_URL || 'http://backend:8000';
 const REDIS_URL = process.env.REDIS_URL || 'redis://redis:6379/0';
 const JWT_SECRET = process.env.JWT_SECRET || 'change-this-jwt-secret';
@@ -35,7 +35,7 @@ const server = http.createServer(app);
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(compression());
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001'],
+  origin: ['http://localhost:3045', 'http://localhost:3046'],
   credentials: true,
 }));
 app.use(morgan('short'));

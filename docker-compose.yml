@@ -15,7 +15,7 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
-      - "5433:5432"
+      - "5445:5432"
     networks:
       - research-net
     healthcheck:
@@ -31,7 +31,7 @@ services:
     image: redis:7-alpine
     container_name: research-redis
     ports:
-      - "6380:6379"
+      - "6345:6379"
     networks:
       - research-net
     healthcheck:
@@ -64,13 +64,13 @@ services:
       - OPENAI_MODEL_NAME=${OPENAI_MODEL_NAME:-gpt-4o-mini}
       - MAX_PAPERS_PER_RUN=${MAX_PAPERS_PER_RUN:-10}
       - RESEARCH_DAYS_LOOKBACK=${RESEARCH_DAYS_LOOKBACK:-14}
-      - MCP_SERVER_PORT=8001
-      - A2A_AGENT_PORT=8002
+      - MCP_SERVER_PORT=8046
+      - A2A_AGENT_PORT=8047
     volumes:
       - ./backend:/app
       - backend-static:/app/staticfiles
     ports:
-      - "8000:8000"
+      - "8045:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -155,13 +155,13 @@ services:
       dockerfile: Dockerfile
     container_name: research-gateway
     environment:
-      - PORT=3001
+      - PORT=3046
       - BACKEND_URL=http://backend:8000
       - REDIS_URL=redis://redis:6379/0
       - JWT_SECRET=${JWT_SECRET:-change-this-jwt-secret}
       - NODE_ENV=${NODE_ENV:-development}
     ports:
-      - "3001:3001"
+      - "3046:3046"
     depends_on:
       - backend
       - redis
@@ -177,10 +177,10 @@ services:
       dockerfile: Dockerfile
     container_name: research-frontend
     environment:
-      - REACT_APP_API_URL=http://localhost:3001
-      - REACT_APP_WS_URL=ws://localhost:3001
+      - REACT_APP_API_URL=http://localhost:3046
+      - REACT_APP_WS_URL=ws://localhost:3046
     ports:
-      - "3000:80"
+      - "3045:80"
     depends_on:
       - gateway
     networks:

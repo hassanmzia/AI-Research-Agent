@@ -8,19 +8,19 @@ A professional-grade, full-stack application for **autonomous AGI research paper
 ┌─────────────────────────────────────────────────────────────────┐
 │                     React / TypeScript Frontend                  │
 │         Dashboard │ Research │ Papers │ Collections              │
-│                   (Port 3000)                                    │
+│                   (Port 3045)                                    │
 ├─────────────────────────────────────────────────────────────────┤
 │                  Node.js API Gateway + WebSocket                 │
 │          REST Proxy │ JWT Auth │ Real-time Updates               │
-│                   (Port 3001)                                    │
+│                   (Port 3046)                                    │
 ├─────────────────────────────────────────────────────────────────┤
 │                     Django REST API Backend                       │
 │   Sessions │ Papers │ Evaluations │ MCP │ A2A │ Celery Tasks    │
-│                   (Port 8000)                                    │
+│                   (Port 8045)                                    │
 ├──────────────┬──────────────┬───────────────┬───────────────────┤
 │  PostgreSQL  │    Redis     │ Celery Worker │   Celery Beat     │
 │   Database   │ Cache/Queue  │  (Async Jobs) │ (Scheduled Jobs)  │
-│ (Port 5433)  │ (Port 6380)  │               │                   │
+│ (Port 5445)  │ (Port 6345)  │               │                   │
 └──────────────┴──────────────┴───────────────┴───────────────────┘
 ```
 
@@ -84,11 +84,11 @@ docker compose up --build
 
 | Service | URL |
 |---------|-----|
-| Frontend | http://localhost:3000 |
-| API Gateway | http://localhost:3001 |
-| Backend API | http://localhost:8000 |
-| API Docs (Swagger) | http://localhost:8000/api/docs/ |
-| Django Admin | http://localhost:8000/admin/ |
+| Frontend | http://localhost:3045 |
+| API Gateway | http://localhost:3046 |
+| Backend API | http://localhost:8045 |
+| API Docs (Swagger) | http://localhost:8045/api/docs/ |
+| Django Admin | http://localhost:8045/admin/ |
 
 ### 4. Create Initial User
 
@@ -183,11 +183,11 @@ docker compose exec backend python manage.py create_default_user
 
 | Service | Port (Host) | Port (Internal) | Purpose |
 |---------|-------------|-----------------|---------|
-| frontend | 3000 | 80 | React UI (Nginx) |
-| gateway | 3001 | 3001 | API Gateway + WebSocket |
-| backend | 8000 | 8000 | Django REST API |
-| postgres | 5433 | 5432 | PostgreSQL database |
-| redis | 6380 | 6379 | Cache + task queue |
+| frontend | 3045 | 80 | React UI (Nginx) |
+| gateway | 3046 | 3046 | API Gateway + WebSocket |
+| backend | 8045 | 8000 | Django REST API |
+| postgres | 5445 | 5432 | PostgreSQL database |
+| redis | 6345 | 6379 | Cache + task queue |
 | celery-worker | - | - | Async research tasks |
 | celery-beat | - | - | Scheduled research jobs |
 

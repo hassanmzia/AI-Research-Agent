@@ -8,7 +8,7 @@ class WebSocketService {
   private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 
   connect(token: string) {
-    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3001';
+    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3046';
     this.ws = new WebSocket(`${wsUrl}?token=${token}`);
 
     this.ws.onopen = () => {
