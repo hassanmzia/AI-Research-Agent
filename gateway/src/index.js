@@ -59,7 +59,7 @@ app.get('/health', (_req, res) => {
 app.use('/api', createProxyMiddleware({
   target: BACKEND_URL,
   changeOrigin: true,
-  pathRewrite: { '^/api': '/api' },
+  pathRewrite: { '^/': '/api/' },
   timeout: 300000,
   proxyTimeout: 300000,
   onError: (err, _req, res) => {
