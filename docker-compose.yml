@@ -79,7 +79,7 @@ services:
     networks:
       - research-net
     healthcheck:
-      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8000/api/\")'"]
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8000/health/\")'"]
       interval: 10s
       timeout: 5s
       retries: 10
