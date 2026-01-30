@@ -17,14 +17,16 @@ def search_arxiv(
     max_papers: int = 10,
     from_date: Optional[str] = None,
     to_date: Optional[str] = None,
+    categories: Optional[List[str]] = None,
 ) -> List[Dict[str, Any]]:
     """Search arXiv for research papers matching the given query."""
-    logger.info(f"ArXiv search: query={query}, max={max_papers}, from={from_date}, to={to_date}")
+    logger.info(f"ArXiv search: query={query}, max={max_papers}, from={from_date}, to={to_date}, categories={categories}")
 
     try:
-        categories = ["cs.AI", "cs.LG", "cs.CL", "cs.CV", "cs.NE"]
-        category_filter = " OR ".join([f"cat:{cat}" for cat in categories])
-        full_query = f"({query}) AND ({category_filter})"
+        full_query = f"({query})"
+        if categories:
+            category_filter = " OR ".join([f"cat:{cat}" for cat in categories])
+            full_query = f"{full_query} AND ({category_filter})"
 
         if from_date or to_date:
             from_arxiv = (
@@ -85,13 +87,14 @@ def discover_and_process_papers(
     max_papers: int = 10,
     from_date: Optional[str] = None,
     to_date: Optional[str] = None,
+    categories: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """Complete discovery workflow: search, deduplicate, validate."""
-    logger.info(f"Starting discovery workflow: query={query}")
+    logger.info(f"Starting discovery workflow: query={query}, categories={categories}")
     start_time = time.time()
 
     try:
-        papers = search_arxiv(query, max_papers, from_date, to_date)
+        papers = search_arxiv(query, max_papers, from_date, to_date, categories=categories)
 
         # Deduplicate
         unique_papers = []
