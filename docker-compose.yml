@@ -1,0 +1,195 @@
+version: '3.9'
+
+services:
+  # ============================================
+  # PostgreSQL Database
+  # ============================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: research-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ai_research}
+      POSTGRES_USER: ${POSTGRES_USER:-researcher}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secure-password-change-me}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5433:5432"
+    networks:
+      - research-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-researcher} -d ${POSTGRES_DB:-ai_research}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Redis (Task Queue & Caching)
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    container_name: research-redis
+    ports:
+      - "6380:6379"
+    networks:
+      - research-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Django Backend API
+  # ============================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: research-backend
+    environment:
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-dev-secret-key-change-in-production}
+      - DJANGO_DEBUG=${DJANGO_DEBUG:-true}
+      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,backend}
+      - POSTGRES_DB=${POSTGRES_DB:-ai_research}
+      - POSTGRES_USER=${POSTGRES_USER:-researcher}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-secure-password-change-me}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_API_BASE=${OPENAI_API_BASE:-https://api.openai.com/v1}
+      - OPENAI_MODEL_NAME=${OPENAI_MODEL_NAME:-gpt-4o-mini}
+      - MAX_PAPERS_PER_RUN=${MAX_PAPERS_PER_RUN:-10}
+      - RESEARCH_DAYS_LOOKBACK=${RESEARCH_DAYS_LOOKBACK:-14}
+      - MCP_SERVER_PORT=8001
+      - A2A_AGENT_PORT=8002
+    volumes:
+      - ./backend:/app
+      - backend-static:/app/staticfiles
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - research-net
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 300"
+
+  # ============================================
+  # Celery Worker (Async Research Tasks)
+  # ============================================
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: research-celery-worker
+    environment:
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-dev-secret-key-change-in-production}
+      - DJANGO_DEBUG=${DJANGO_DEBUG:-true}
+      - POSTGRES_DB=${POSTGRES_DB:-ai_research}
+      - POSTGRES_USER=${POSTGRES_USER:-researcher}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-secure-password-change-me}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_API_BASE=${OPENAI_API_BASE:-https://api.openai.com/v1}
+      - OPENAI_MODEL_NAME=${OPENAI_MODEL_NAME:-gpt-4o-mini}
+      - MAX_PAPERS_PER_RUN=${MAX_PAPERS_PER_RUN:-10}
+      - RESEARCH_DAYS_LOOKBACK=${RESEARCH_DAYS_LOOKBACK:-14}
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - research-net
+    command: celery -A config worker -l info -c 2
+
+  # ============================================
+  # Celery Beat (Scheduled Tasks)
+  # ============================================
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: research-celery-beat
+    environment:
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-dev-secret-key-change-in-production}
+      - DJANGO_DEBUG=${DJANGO_DEBUG:-true}
+      - POSTGRES_DB=${POSTGRES_DB:-ai_research}
+      - POSTGRES_USER=${POSTGRES_USER:-researcher}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-secure-password-change-me}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - research-net
+    command: celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+
+  # ============================================
+  # Node.js API Gateway + WebSocket Server
+  # ============================================
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: research-gateway
+    environment:
+      - PORT=3001
+      - BACKEND_URL=http://backend:8000
+      - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET=${JWT_SECRET:-change-this-jwt-secret}
+      - NODE_ENV=${NODE_ENV:-development}
+    ports:
+      - "3001:3001"
+    depends_on:
+      - backend
+      - redis
+    networks:
+      - research-net
+
+  # ============================================
+  # React Frontend
+  # ============================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: research-frontend
+    environment:
+      - REACT_APP_API_URL=http://localhost:3001
+      - REACT_APP_WS_URL=ws://localhost:3001
+    ports:
+      - "3000:80"
+    depends_on:
+      - gateway
+    networks:
+      - research-net
+
+volumes:
+  pgdata:
+  backend-static:
+
+networks:
+  research-net:
+    driver: bridge

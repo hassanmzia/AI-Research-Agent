@@ -1,0 +1,22 @@
+{
+  "name": "ai-research-gateway",
+  "version": "1.0.0",
+  "description": "API Gateway and WebSocket server for AI Research Multi-Agent System",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.1",
+    "http-proxy-middleware": "^3.0.3",
+    "ws": "^8.18.0",
+    "ioredis": "^5.4.1",
+    "jsonwebtoken": "^9.0.2",
+    "cors": "^2.8.5",
+    "morgan": "^1.10.0",
+    "helmet": "^8.0.0",
+    "express-rate-limit": "^7.4.1",
+    "compression": "^1.7.5"
+  }
+}
