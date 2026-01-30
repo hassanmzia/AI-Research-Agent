@@ -30,6 +30,7 @@ def run_pipeline(
     max_papers: int = 10,
     days_lookback: int = 14,
     custom_keywords: List[str] = None,
+    search_categories: List[str] = None,
     on_phase_change: Callable = None,
     on_log: Callable = None,
 ) -> Dict[str, Any]:
@@ -89,9 +90,15 @@ def run_pipeline(
         # === PHASE 2: DISCOVERY ===
         change_phase(ResearchPhase.DISCOVERY)
 
-        # Build search query from plan keywords
-        keywords = plan.get("search_keywords", ["AGI", "artificial general intelligence"])[:5]
-        search_query = " OR ".join(keywords[:3])
+        # Build search query from plan keywords (use all keywords, up to 8)
+        keywords = plan.get("search_keywords", [research_objective])[:8]
+        if not keywords:
+            keywords = [research_objective]
+        search_query = " OR ".join(keywords)
+
+        # Use user-provided categories if available, otherwise use planner's categories
+        if not search_categories:
+            search_categories = plan.get("search_strategy", {}).get("categories", [])
 
         date_range = plan.get("search_strategy", {}).get("date_range", "")
         from_date = to_date = None
@@ -100,13 +107,14 @@ def run_pipeline(
             from_date = parts[0].strip()
             to_date = parts[1].strip()
 
-        log("discovery", f"Searching for papers: '{search_query}'")
+        log("discovery", f"Searching for papers: '{search_query}' in categories: {search_categories or 'all'}")
 
         discovery_result = discover_and_process_papers(
             query=search_query,
             max_papers=max_papers,
             from_date=from_date,
             to_date=to_date,
+            categories=search_categories if search_categories else None,
         )
 
         papers = discovery_result.get("processed_papers", [])

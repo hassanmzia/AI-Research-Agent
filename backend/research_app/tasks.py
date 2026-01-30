@@ -57,6 +57,7 @@ def run_research_pipeline(self, session_id: str):
             max_papers=session.max_papers,
             days_lookback=session.days_lookback,
             custom_keywords=session.custom_keywords or [],
+            search_categories=session.search_categories or [],
             on_phase_change=on_phase_change,
             on_log=on_log,
         )

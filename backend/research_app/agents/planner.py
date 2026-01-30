@@ -14,16 +14,16 @@ from .evaluation import call_llm_with_retry
 
 logger = logging.getLogger("research_app.agents.planner")
 
-PLANNER_SYSTEM_PROMPT = """You are a Planning Specialist in an Artificial General Intelligence research system.
+PLANNER_SYSTEM_PROMPT = """You are a Research Planning Specialist that creates execution plans for academic paper searches.
 
-Create a comprehensive research execution plan based on the given objective.
+Create a comprehensive research execution plan based on the given objective. The plan must be highly relevant to the user's specific research topic.
 
 OUTPUT FORMAT: Return a valid JSON object:
 {
     "search_keywords": ["keyword1", "keyword2", ...],
     "search_strategy": {
         "primary_sources": ["arxiv"],
-        "categories": ["cs.AI", "cs.LG", "cs.CL"],
+        "categories": ["q-fin.TR", "q-fin.PM", "cs.AI"],
         "date_range": "YYYY-MM-DD to YYYY-MM-DD",
         "max_papers_per_source": 10
     },
@@ -38,11 +38,14 @@ OUTPUT FORMAT: Return a valid JSON object:
 }
 
 GUIDELINES:
-1. Extract 5-10 highly relevant search keywords
-2. Set appropriate time windows
-3. Define measurable success criteria
-4. Focus on 2-5 specific research areas
-5. List topics that should be avoided
+1. Extract 5-10 highly relevant search keywords that directly match the research objective
+2. Choose arXiv categories that are most relevant to the topic (e.g., q-fin.* for finance, cs.* for computer science, stat.* for statistics, econ.* for economics, physics.* for physics, etc.). Use an empty list if the topic is broad and should not be restricted to specific categories.
+3. Set appropriate time windows
+4. Define measurable success criteria
+5. Focus on 2-5 specific research areas directly related to the objective
+6. List topics that should be avoided
+
+IMPORTANT: Keywords and categories MUST be directly relevant to the user's research objective. Do not default to AI/AGI topics unless the user specifically asks about AI/AGI.
 
 Be thorough, specific, and actionable."""
 
@@ -64,10 +67,9 @@ Current date: {datetime.now().isoformat()}
 Default date range: {date_range}
 
 Context:
-- AGI-focused research system
 - Access to arXiv database
 - Pipeline: discovery → evaluation → synthesis
-- Focus on recent, high-impact AI/ML work
+- Focus on papers directly relevant to the research objective above
 
 Generate the execution plan now."""
 
@@ -92,17 +94,24 @@ Generate the execution plan now."""
         return plan
 
     except (json.JSONDecodeError, Exception) as e:
-        logger.error(f"Plan creation failed: {e}, using default plan")
+        logger.error(f"Plan creation failed: {e}, using default plan derived from objective")
+        # Derive keywords from the research objective itself
+        fallback_keywords = [
+            kw.strip() for kw in research_objective.split()
+            if len(kw.strip()) > 3
+        ][:8]
+        if not fallback_keywords:
+            fallback_keywords = [research_objective[:100]]
         return {
-            "search_keywords": ["AGI", "artificial general intelligence", "general AI"],
+            "search_keywords": fallback_keywords,
             "search_strategy": {
                 "primary_sources": ["arxiv"],
-                "categories": ["cs.AI", "cs.LG"],
+                "categories": [],
                 "date_range": date_range,
                 "max_papers_per_source": 10,
             },
             "success_criteria": {"min_papers": 10, "min_high_agi_papers": 2},
-            "focus_areas": ["general artificial intelligence"],
+            "focus_areas": [research_objective[:200]],
             "exclusions": [],
             "special_instructions": f"Default plan for: {research_objective}",
         }
