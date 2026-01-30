@@ -85,9 +85,10 @@ function authenticateWS(request) {
     const { query } = url.parse(request.url, true);
     const token = query.token;
     if (!token) return null;
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
     return decoded;
   } catch (err) {
+    console.error('WebSocket auth error:', err.message);
     return null;
   }
 }

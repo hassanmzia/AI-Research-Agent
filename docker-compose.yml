@@ -165,7 +165,7 @@ services:
       - PORT=3046
       - BACKEND_URL=http://backend:8000
       - REDIS_URL=redis://redis:6379/0
-      - JWT_SECRET=${JWT_SECRET:-change-this-jwt-secret}
+      - JWT_SECRET=${DJANGO_SECRET_KEY:-dev-secret-key-change-in-production}
       - NODE_ENV=${NODE_ENV:-development}
     ports:
       - "3046:3046"
