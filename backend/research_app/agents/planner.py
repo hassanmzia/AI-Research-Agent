@@ -14,19 +14,24 @@ from .evaluation import call_llm_with_retry
 
 logger = logging.getLogger("research_app.agents.planner")
 
-PLANNER_SYSTEM_PROMPT = """You are a Research Planning Specialist that creates execution plans for academic paper searches.
+PLANNER_SYSTEM_PROMPT = """You are a Research Planning Specialist that creates execution plans for academic paper searches on arXiv.
 
 Create a comprehensive research execution plan based on the given objective. The plan must be highly relevant to the user's specific research topic.
 
 OUTPUT FORMAT: Return a valid JSON object:
 {
-    "search_keywords": ["keyword1", "keyword2", ...],
+    "search_keywords": ["keyword phrase 1", "keyword phrase 2", ...],
+    "arxiv_queries": [
+        "all:\\\"reinforcement learning\\\" AND all:\\\"stock trading\\\"",
+        "abs:\\\"algorithmic trading\\\" AND abs:\\\"deep reinforcement learning\\\""
+    ],
     "search_strategy": {
         "primary_sources": ["arxiv"],
         "categories": ["q-fin.TR", "q-fin.PM", "cs.AI"],
         "date_range": "YYYY-MM-DD to YYYY-MM-DD",
         "max_papers_per_source": 10
     },
+    "required_terms": ["term1", "term2"],
     "success_criteria": {
         "min_papers": 10,
         "min_high_agi_papers": 2,
@@ -38,14 +43,19 @@ OUTPUT FORMAT: Return a valid JSON object:
 }
 
 GUIDELINES:
-1. Extract 5-10 highly relevant search keywords that directly match the research objective
-2. Choose arXiv categories that are most relevant to the topic (e.g., q-fin.* for finance, cs.* for computer science, stat.* for statistics, econ.* for economics, physics.* for physics, etc.). Use an empty list if the topic is broad and should not be restricted to specific categories.
-3. Set appropriate time windows
-4. Define measurable success criteria
-5. Focus on 2-5 specific research areas directly related to the objective
-6. List topics that should be avoided
+1. Extract 5-10 highly relevant search keyword PHRASES (not single words) that directly match the research objective. E.g. for stock trading with RL, use phrases like "stock trading", "reinforcement learning", "algorithmic trading", "portfolio optimization".
+2. Generate 2-4 arxiv_queries using arXiv query syntax. These are the actual queries sent to arXiv's API.
+   - Use AND between core concepts to ensure papers match ALL key aspects.
+   - Use field prefixes: all: (title+abstract+fulltext), abs: (abstract), ti: (title)
+   - Quote multi-word phrases: all:\"reinforcement learning\" AND all:\"stock trading\"
+   - Good: all:\"stock trading\" AND all:\"reinforcement learning\"
+   - Bad: stock OR trading OR reinforcement OR learning (too broad, matches anything)
+3. Set required_terms: 2-3 terms that a relevant paper MUST mention in its title or abstract. Papers missing ALL required terms will be filtered out.
+4. Choose arXiv categories relevant to the topic (q-fin.* for finance, cs.* for CS, stat.* for statistics, econ.* for economics, etc.). Use an empty list if the topic is broad.
+5. Set appropriate time windows
+6. Focus on 2-5 specific research areas directly related to the objective
 
-IMPORTANT: Keywords and categories MUST be directly relevant to the user's research objective. Do not default to AI/AGI topics unless the user specifically asks about AI/AGI.
+IMPORTANT: Keywords, queries, and categories MUST be directly relevant to the user's research objective. Do not default to AI/AGI topics unless the user specifically asks about AI/AGI.
 
 Be thorough, specific, and actionable."""
 

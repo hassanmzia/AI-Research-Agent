@@ -91,10 +91,9 @@ def run_pipeline(
         # === PHASE 2: DISCOVERY ===
         change_phase(ResearchPhase.DISCOVERY)
 
-        # Build search query: use the research objective directly as primary query
-        # ArXiv searches title + abstract, so the full objective gives best relevance
         keywords = plan.get("search_keywords", [])[:8]
-        search_query = research_objective
+        arxiv_queries = plan.get("arxiv_queries", [])
+        required_terms = plan.get("required_terms", [])
 
         # Use user-provided categories if available, otherwise use planner's categories
         if not search_categories:
@@ -107,49 +106,64 @@ def run_pipeline(
             from_date = parts[0].strip()
             to_date = parts[1].strip()
 
-        # Fetch extra papers (3x) so we have enough after relevance filtering
-        fetch_count = max_papers * 3
+        # Build search queries: prefer planner-generated arxiv_queries, fall back
+        # to AND-joining keyword phrases for a targeted search
+        if not arxiv_queries:
+            arxiv_queries = [_build_arxiv_query(keywords, research_objective)]
 
-        log("discovery", f"Searching for papers: '{search_query}' in categories: {search_categories or 'all'}")
+        # Run multiple queries and collect all unique papers
+        all_papers = {}
+        fetch_per_query = max(max_papers * 2, 20)
 
-        discovery_result = discover_and_process_papers(
-            query=search_query,
-            max_papers=fetch_count,
-            from_date=from_date,
-            to_date=to_date,
-            categories=search_categories if search_categories else None,
-        )
+        for i, query in enumerate(arxiv_queries[:4]):
+            log("discovery", f"Running search query {i+1}/{min(len(arxiv_queries), 4)}: {query}")
+            discovery_result = discover_and_process_papers(
+                query=query,
+                max_papers=fetch_per_query,
+                from_date=from_date,
+                to_date=to_date,
+                categories=search_categories if search_categories else None,
+            )
+            for paper in discovery_result.get("processed_papers", []):
+                paper_id = paper.get("id", paper.get("title", ""))
+                if paper_id not in all_papers:
+                    all_papers[paper_id] = paper
 
-        papers = discovery_result.get("processed_papers", [])
+        papers = list(all_papers.values())
+        log("discovery", f"Total unique papers from all queries: {len(papers)}")
 
-        # Build relevance terms from both objective and planner keywords
+        # Build relevance terms from objective, keywords, and required_terms
         relevance_terms = _extract_relevance_terms(research_objective, keywords)
         log("discovery", f"Relevance terms: {relevance_terms}")
 
-        # Score and filter papers for relevance to the research objective
+        # Score papers for relevance
         scored_papers = []
         for paper in papers:
-            score = _compute_relevance_score(paper, relevance_terms)
+            score = _compute_relevance_score(paper, relevance_terms, required_terms)
             scored_papers.append((score, paper))
 
         scored_papers.sort(key=lambda x: x[0], reverse=True)
 
-        # Keep papers with relevance score > 0, up to max_papers
-        relevant_papers = [p for score, p in scored_papers if score > 0][:max_papers]
-
-        # If we got too few relevant papers, fall back to top-scored from ArXiv
-        if len(relevant_papers) < max(3, max_papers // 2) and papers:
-            relevant_papers = [p for _, p in scored_papers[:max_papers]]
-            log("discovery", f"Low relevance matches, using top {len(relevant_papers)} by best available score", level="warning")
+        # Filter: require minimum relevance score (at least one multi-word match)
+        min_score = 2.0
+        relevant_papers = [p for score, p in scored_papers if score >= min_score][:max_papers]
 
         filtered_count = len(papers) - len(relevant_papers)
         if filtered_count > 0:
-            log("discovery", f"Filtered out {filtered_count} irrelevant papers")
+            log("discovery", f"Filtered out {filtered_count} papers below relevance threshold ({min_score})")
+
+        if not relevant_papers and papers:
+            # Last resort: take top papers by score even if below threshold
+            relevant_papers = [p for _, p in scored_papers[:max(3, max_papers // 3)]]
+            log("discovery", f"No papers met relevance threshold, using top {len(relevant_papers)} by best score", level="warning")
 
         papers = relevant_papers
         result["discovered_papers"] = papers
-        result["statistics"]["discovery"] = discovery_result.get("statistics", {})
-        result["statistics"]["discovery"]["relevance_filtered"] = filtered_count if filtered_count > 0 else 0
+        result["statistics"]["discovery"] = {
+            "total_fetched": len(all_papers),
+            "relevance_filtered": filtered_count if filtered_count > 0 else 0,
+            "queries_run": min(len(arxiv_queries), 4),
+        }
 
         result["phases_completed"].append("discovery")
         log("discovery", f"Discovered {len(papers)} relevant papers", papers_found=len(papers))
@@ -216,12 +230,58 @@ def run_pipeline(
         return result
 
 
+def _build_arxiv_query(keywords: List[str], objective: str) -> str:
+    """
+    Build a proper ArXiv API query from keywords using AND logic.
+    Uses the `all:` field prefix which searches title + abstract + fulltext.
+    Multi-word keywords are quoted to match as phrases.
+    """
+    stop_words = {
+        "find", "some", "papers", "on", "about", "the", "a", "an", "and", "or",
+        "for", "in", "of", "to", "with", "using", "that", "this", "from", "by",
+        "is", "are", "was", "were", "be", "been", "have", "has", "do", "does",
+        "how", "what", "which", "where", "when", "who", "research", "study",
+        "studies", "paper", "recent", "new", "novel", "based", "related",
+        "system", "systems", "approach", "method",
+    }
+
+    # Use planner keywords if available
+    query_terms = []
+    for kw in keywords:
+        cleaned = kw.strip().lower()
+        if cleaned and len(cleaned) > 3:
+            # Quote multi-word phrases
+            if " " in cleaned:
+                query_terms.append(f'all:"{cleaned}"')
+            else:
+                query_terms.append(f"all:{cleaned}")
+
+    # If no keywords from planner, extract from objective
+    if not query_terms:
+        obj_lower = objective.lower()
+        words = re.findall(r'[a-z]+', obj_lower)
+        meaningful = [w for w in words if w not in stop_words and len(w) > 3]
+        for w in meaningful[:5]:
+            query_terms.append(f"all:{w}")
+
+    if not query_terms:
+        return objective
+
+    # AND the first few terms to be specific, OR extra terms for breadth
+    # e.g., (all:"stock trading" AND all:"reinforcement learning") OR all:"portfolio optimization"
+    if len(query_terms) <= 3:
+        return " AND ".join(query_terms)
+    else:
+        core = " AND ".join(query_terms[:3])
+        extra = " OR ".join(query_terms[3:6])
+        return f"({core}) OR ({extra})"
+
+
 def _extract_relevance_terms(objective: str, keywords: List[str]) -> List[str]:
     """
     Extract meaningful multi-word and single-word terms from the objective and keywords.
     Returns a list of lowercase terms ordered by specificity (multi-word first).
     """
-    # Common stop words to exclude
     stop_words = {
         "find", "some", "papers", "on", "about", "the", "a", "an", "and", "or",
         "for", "in", "of", "to", "with", "using", "that", "this", "from", "by",
@@ -238,7 +298,7 @@ def _extract_relevance_terms(objective: str, keywords: List[str]) -> List[str]:
         if cleaned and len(cleaned) > 2:
             terms.append(cleaned)
 
-    # Extract meaningful phrases from objective (2-3 word combinations)
+    # Extract meaningful phrases from objective
     obj_lower = objective.lower()
     words = re.findall(r'[a-z]+', obj_lower)
     meaningful_words = [w for w in words if w not in stop_words and len(w) > 2]
@@ -263,15 +323,26 @@ def _extract_relevance_terms(objective: str, keywords: List[str]) -> List[str]:
     return unique_terms
 
 
-def _compute_relevance_score(paper: Dict[str, Any], terms: List[str]) -> float:
+def _compute_relevance_score(
+    paper: Dict[str, Any],
+    terms: List[str],
+    required_terms: List[str] = None,
+) -> float:
     """
     Compute a relevance score for a paper against the search terms.
     Higher score = more relevant.
     Multi-word term matches are weighted higher than single-word matches.
+    If required_terms are provided, paper must mention at least one to score > 0.
     """
     title = paper.get("title", "").lower()
     abstract = paper.get("metadata", {}).get("abstract", "").lower()
     text = f"{title} {abstract}"
+
+    # Check required terms first — paper must contain at least one
+    if required_terms:
+        has_required = any(rt.lower() in text for rt in required_terms)
+        if not has_required:
+            return 0.0
 
     score = 0.0
     for term in terms:
