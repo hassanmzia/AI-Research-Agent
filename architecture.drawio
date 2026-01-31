@@ -1,0 +1,228 @@
+<mxfile host="app.diagrams.net" modified="2026-01-31T00:00:00.000Z" agent="Claude" version="24.0.0" type="device">
+  <diagram id="architecture" name="Technical Architecture">
+    <mxGraphModel dx="1800" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="AI Research Multi-Agent System — Technical Architecture" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=22;fontStyle=1;fontColor=#1a1a2e;" vertex="1" parent="1">
+          <mxGeometry x="400" y="10" width="700" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== USER LAYER ==================== -->
+        <mxCell id="user_group" value="User Layer" style="swimlane;startSize=25;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=13;rounded=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="50" y="60" width="1500" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="browser" value="&#xa;Web Browser" style="shape=image;verticalLabelPosition=bottom;labelBackgroundColor=default;verticalAlign=top;aspect=fixed;imageAspect=0;image=https://img.icons8.com/fluency/48/monitor.png;fontSize=11;fontStyle=1;" vertex="1" parent="user_group">
+          <mxGeometry x="30" y="30" width="48" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="user_actions" value="Research Objective&#xa;Paper Management&#xa;Collections &amp; Scheduling" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=left;spacingLeft=10;" vertex="1" parent="user_group">
+          <mxGeometry x="100" y="30" width="200" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="react_app" value="React 18 + TypeScript&#xa;Tailwind CSS | Zustand&#xa;Recharts | WebSocket" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;fontStyle=1;" vertex="1" parent="user_group">
+          <mxGeometry x="350" y="30" width="180" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="pages" value="Dashboard | Sessions | Papers&#xa;Collections | Scheduled | Auth" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="user_group">
+          <mxGeometry x="570" y="30" width="200" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="nginx" value="Nginx&#xa;:3045 → :80&#xa;Static + Proxy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;fontStyle=1;" vertex="1" parent="user_group">
+          <mxGeometry x="820" y="30" width="120" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Arrows in user layer -->
+        <mxCell id="ua1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#6c8ebf;strokeWidth=1.5;" edge="1" source="user_actions" target="react_app" parent="user_group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ua2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#6c8ebf;strokeWidth=1.5;" edge="1" source="react_app" target="pages" parent="user_group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ua3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#6c8ebf;strokeWidth=1.5;" edge="1" source="pages" target="nginx" parent="user_group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== GATEWAY LAYER ==================== -->
+        <mxCell id="gw_group" value="API Gateway Layer" style="swimlane;startSize=25;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=13;rounded=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="50" y="180" width="1500" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="express" value="Express.js Gateway&#xa;:3046&#xa;JWT Auth | Rate Limit | CORS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;fontStyle=1;" vertex="1" parent="gw_group">
+          <mxGeometry x="30" y="30" width="220" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="proxy" value="HTTP Proxy&#xa;/api/* → backend:8000&#xa;http-proxy-middleware" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="gw_group">
+          <mxGeometry x="290" y="30" width="180" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="ws_server" value="WebSocket Server&#xa;/ws → Real-time Updates&#xa;Session Subscriptions" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="gw_group">
+          <mxGeometry x="510" y="30" width="180" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="redis_sub" value="Redis Subscriber&#xa;research_updates channel&#xa;ioredis pub/sub" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="gw_group">
+          <mxGeometry x="730" y="30" width="180" height="55" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ga1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#d6b656;strokeWidth=1.5;" edge="1" source="express" target="proxy" parent="gw_group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ga2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#d6b656;strokeWidth=1.5;" edge="1" source="express" target="ws_server" parent="gw_group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ga3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#d6b656;strokeWidth=1.5;" edge="1" source="ws_server" target="redis_sub" parent="gw_group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Connection: Nginx → Gateway -->
+        <mxCell id="ng_conn" value="/api &amp; /ws" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#333333;strokeWidth=2;dashed=1;" edge="1" source="nginx" target="express" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== BACKEND LAYER ==================== -->
+        <mxCell id="be_group" value="Backend Application Layer" style="swimlane;startSize=25;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=13;rounded=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="50" y="300" width="1500" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="django" value="Django 5.1 + DRF&#xa;:8045 → :8000&#xa;Gunicorn (4 workers)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;fontStyle=1;" vertex="1" parent="be_group">
+          <mxGeometry x="30" y="30" width="170" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="rest_api" value="REST API (30+ endpoints)&#xa;Sessions | Papers | Evaluations&#xa;Collections | Scheduled | Dashboard" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="be_group">
+          <mxGeometry x="230" y="30" width="220" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="jwt_auth" value="JWT Authentication&#xa;SimpleJWT&#xa;Token + Refresh" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="be_group">
+          <mxGeometry x="230" y="95" width="140" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="mcp_endpoint" value="MCP Server&#xa;JSON-RPC 2.0&#xa;5 Tools" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6d0de;strokeColor=#996699;fontSize=10;fontStyle=1;" vertex="1" parent="be_group">
+          <mxGeometry x="490" y="30" width="130" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="a2a_endpoint" value="A2A Protocol&#xa;Agent Cards&#xa;Task Send/Get" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6d0de;strokeColor=#996699;fontSize=10;fontStyle=1;" vertex="1" parent="be_group">
+          <mxGeometry x="650" y="30" width="130" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="models" value="8 Models&#xa;Session | Paper | Evaluation&#xa;Collection | Scheduled | Log | Export" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="be_group">
+          <mxGeometry x="820" y="30" width="200" height="55" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ba1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82b366;strokeWidth=1.5;" edge="1" source="django" target="rest_api" parent="be_group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ba2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82b366;strokeWidth=1.5;" edge="1" source="rest_api" target="mcp_endpoint" parent="be_group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ba3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82b366;strokeWidth=1.5;" edge="1" source="mcp_endpoint" target="a2a_endpoint" parent="be_group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ba4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82b366;strokeWidth=1.5;" edge="1" source="a2a_endpoint" target="models" parent="be_group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Connection: Gateway → Backend -->
+        <mxCell id="gb_conn" value="REST + JSON" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#333333;strokeWidth=2;dashed=1;" edge="1" source="proxy" target="django" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== AGENT PIPELINE LAYER ==================== -->
+        <mxCell id="agent_group" value="Multi-Agent Pipeline (LangChain + LangGraph)" style="swimlane;startSize=25;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=13;rounded=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="50" y="450" width="1500" height="160" as="geometry" />
+        </mxCell>
+
+        <!-- Lead Supervisor -->
+        <mxCell id="supervisor" value="Lead Supervisor&#xa;Pipeline Orchestrator&#xa;Phase State Machine" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4a148c;strokeColor=#4a148c;fontColor=#ffffff;fontSize=10;fontStyle=1;" vertex="1" parent="agent_group">
+          <mxGeometry x="30" y="40" width="150" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Planner -->
+        <mxCell id="planner" value="Planner Agent&#xa;GPT-4o-mini&#xa;Keywords + ArXiv Queries&#xa;+ Required Terms" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1565c0;strokeColor=#1565c0;fontColor=#ffffff;fontSize=10;fontStyle=1;" vertex="1" parent="agent_group">
+          <mxGeometry x="230" y="35" width="170" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- Discovery -->
+        <mxCell id="discovery" value="Discovery Agent&#xa;ArXiv API Search&#xa;Relevance Sort + Filter&#xa;Progressive Broadening" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2e7d32;strokeColor=#2e7d32;fontColor=#ffffff;fontSize=10;fontStyle=1;" vertex="1" parent="agent_group">
+          <mxGeometry x="450" y="35" width="170" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- Evaluation -->
+        <mxCell id="evaluation" value="Evaluation Agent&#xa;GPT-4o-mini&#xa;10-Parameter AGI Scoring&#xa;Weighted Classification" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e65100;strokeColor=#e65100;fontColor=#ffffff;fontSize=10;fontStyle=1;" vertex="1" parent="agent_group">
+          <mxGeometry x="670" y="35" width="170" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- Synthesis -->
+        <mxCell id="synthesis" value="Synthesis Agent&#xa;Report Generation&#xa;Executive Summary&#xa;Rankings + Methodology" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#880e4f;strokeColor=#880e4f;fontColor=#ffffff;fontSize=10;fontStyle=1;" vertex="1" parent="agent_group">
+          <mxGeometry x="890" y="35" width="170" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- AGI Parameters -->
+        <mxCell id="agi_params" value="10 AGI Parameters&#xa;Novel Problem Solving (15%) | Few-Shot Learning (15%) | Task Transfer (15%)&#xa;Abstract Reasoning (12%) | Contextual Adaptation (10%) | Multi-Rule Integration (10%)&#xa;Generalization (8%) | Meta-Learning (8%) | World Modeling (4%) | Autonomous Goals (3%)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#9673a6;fontSize=9;align=left;spacingLeft=10;" vertex="1" parent="agent_group">
+          <mxGeometry x="230" y="110" width="600" height="45" as="geometry" />
+        </mxCell>
+
+        <!-- Agent arrows -->
+        <mxCell id="aa1" value="1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ffffff;strokeWidth=2;fontColor=#ffffff;fontStyle=1;fontSize=11;" edge="1" source="supervisor" target="planner" parent="agent_group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="aa2" value="2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ffffff;strokeWidth=2;fontColor=#ffffff;fontStyle=1;fontSize=11;" edge="1" source="planner" target="discovery" parent="agent_group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="aa3" value="3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ffffff;strokeWidth=2;fontColor=#ffffff;fontStyle=1;fontSize=11;" edge="1" source="discovery" target="evaluation" parent="agent_group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="aa4" value="4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#ffffff;strokeWidth=2;fontColor=#ffffff;fontStyle=1;fontSize=11;" edge="1" source="evaluation" target="synthesis" parent="agent_group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== ASYNC TASK LAYER ==================== -->
+        <mxCell id="async_group" value="Async Task Processing" style="swimlane;startSize=25;fillColor=#ffe0b2;strokeColor=#f57c00;fontStyle=1;fontSize=13;rounded=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="50" y="630" width="1500" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="celery_worker" value="Celery Worker&#xa;Pipeline Execution&#xa;Async Research Tasks" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe0b2;strokeColor=#f57c00;fontSize=10;fontStyle=1;" vertex="1" parent="async_group">
+          <mxGeometry x="30" y="30" width="180" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="celery_beat" value="Celery Beat&#xa;Scheduled Research&#xa;Cron-like Scheduler" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe0b2;strokeColor=#f57c00;fontSize=10;fontStyle=1;" vertex="1" parent="async_group">
+          <mxGeometry x="260" y="30" width="180" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="redis_pub" value="Redis Publisher&#xa;research_updates&#xa;Phase Change Notifications" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="async_group">
+          <mxGeometry x="490" y="30" width="190" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="openai" value="OpenAI API&#xa;GPT-4o-mini&#xa;Planning + Evaluation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#43a047;fontSize=10;fontStyle=1;" vertex="1" parent="async_group">
+          <mxGeometry x="730" y="30" width="160" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="arxiv_api" value="ArXiv API&#xa;Paper Discovery&#xa;export.arxiv.org" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#43a047;fontSize=10;fontStyle=1;" vertex="1" parent="async_group">
+          <mxGeometry x="930" y="30" width="160" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== DATA LAYER ==================== -->
+        <mxCell id="data_group" value="Data Persistence Layer" style="swimlane;startSize=25;fillColor=#bbdefb;strokeColor=#1976d2;fontStyle=1;fontSize=13;rounded=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="50" y="750" width="1500" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="postgres" value="PostgreSQL 16&#xa;:5445 → :5432&#xa;8 Tables | Persistent Volume" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fillColor=#bbdefb;strokeColor=#1976d2;fontSize=10;fontStyle=1;" vertex="1" parent="data_group">
+          <mxGeometry x="30" y="25" width="180" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="redis" value="Redis 7&#xa;:6345 → :6379&#xa;Task Queue | Pub/Sub | Cache" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fillColor=#ffccbc;strokeColor=#e64a19;fontSize=10;fontStyle=1;" vertex="1" parent="data_group">
+          <mxGeometry x="270" y="25" width="180" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="db_tables" value="ResearchSession | Paper | AGIEvaluation | AgentLog&#xa;ResearchCollection | ScheduledResearch | ExportRecord | User" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="data_group">
+          <mxGeometry x="510" y="35" width="400" height="45" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== DOCKER LAYER ==================== -->
+        <mxCell id="docker_group" value="Docker Infrastructure" style="swimlane;startSize=25;fillColor=#e8eaf6;strokeColor=#3f51b5;fontStyle=1;fontSize=13;rounded=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="50" y="870" width="1500" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="compose" value="docker-compose.yml | 7 Services | Bridge Network (research-net) | Volumes: pgdata, staticfiles | Health Checks | Dependency Ordering" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8eaf6;strokeColor=#3f51b5;fontSize=10;fontStyle=0;" vertex="1" parent="docker_group">
+          <mxGeometry x="30" y="30" width="1440" height="35" as="geometry" />
+        </mxCell>
+
+        <!-- Cross-layer connections -->
+        <mxCell id="be_agent_conn" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#9673a6;strokeWidth=2;" edge="1" source="rest_api" target="supervisor" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="agent_celery_conn" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#f57c00;strokeWidth=2;" edge="1" source="supervisor" target="celery_worker" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="celery_redis_conn" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#e64a19;strokeWidth=1.5;dashed=1;" edge="1" source="redis_pub" target="redis" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="redis_gw_conn" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#e64a19;strokeWidth=1.5;dashed=1;" edge="1" source="redis_sub" target="redis" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="be_pg_conn" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#1976d2;strokeWidth=2;" edge="1" source="models" target="postgres" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
