@@ -93,7 +93,9 @@ export const dashboardAPI = {
 // Collections
 export const collectionsAPI = {
   list: () => api.get('/collections/'),
+  get: (id: string) => api.get(`/collections/${id}/`),
   create: (data: { name: string; description?: string }) => api.post('/collections/', data),
+  delete: (id: string) => api.delete(`/collections/${id}/`),
   addPaper: (collectionId: string, paperId: string) =>
     api.post(`/collections/${collectionId}/add_paper/`, { paper_id: paperId }),
   removePaper: (collectionId: string, paperId: string) =>

@@ -112,6 +112,13 @@ class ResearchCollectionSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'user', 'created_at', 'updated_at']
 
 
+class ResearchCollectionDetailSerializer(ResearchCollectionSerializer):
+    papers = PaperListSerializer(many=True, read_only=True)
+
+    class Meta(ResearchCollectionSerializer.Meta):
+        pass
+
+
 class ScheduledResearchSerializer(serializers.ModelSerializer):
     class Meta:
         model = ScheduledResearch
