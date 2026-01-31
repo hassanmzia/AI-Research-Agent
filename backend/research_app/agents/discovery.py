@@ -45,7 +45,7 @@ def search_arxiv(
         search = arxiv.Search(
             query=full_query,
             max_results=max_papers,
-            sort_by=arxiv.SortCriterion.SubmittedDate,
+            sort_by=arxiv.SortCriterion.Relevance,
             sort_order=arxiv.SortOrder.Descending,
         )
 
