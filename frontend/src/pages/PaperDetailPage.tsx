@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { papersAPI } from '../services/api';
-import { Paper } from '../types';
+import { papersAPI, collectionsAPI } from '../services/api';
+import { Paper, ResearchCollection } from '../types';
 import StatusBadge from '../components/StatusBadge';
 import ScoreGauge from '../components/ScoreGauge';
 import AGIRadarChart from '../components/AGIRadarChart';
-import { ExternalLink, Bookmark, Save } from 'lucide-react';
+import { ExternalLink, Bookmark, Save, FolderPlus, Check, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function PaperDetailPage() {
@@ -13,6 +13,9 @@ export default function PaperDetailPage() {
   const [paper, setPaper] = useState<Paper | null>(null);
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState('');
+  const [collections, setCollections] = useState<ResearchCollection[]>([]);
+  const [showCollectionPicker, setShowCollectionPicker] = useState(false);
+  const [addingTo, setAddingTo] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -40,6 +43,30 @@ export default function PaperDetailPage() {
     setPaper({ ...paper, is_bookmarked: res.data.is_bookmarked });
   };
 
+  const openCollectionPicker = async () => {
+    try {
+      const res = await collectionsAPI.list();
+      setCollections(res.data.results || res.data);
+      setShowCollectionPicker(true);
+    } catch {
+      toast.error('Failed to load collections');
+    }
+  };
+
+  const addToCollection = async (collectionId: string) => {
+    if (!id) return;
+    setAddingTo(collectionId);
+    try {
+      await collectionsAPI.addPaper(collectionId, id);
+      toast.success('Paper added to collection');
+      setShowCollectionPicker(false);
+    } catch {
+      toast.error('Failed to add paper to collection');
+    } finally {
+      setAddingTo(null);
+    }
+  };
+
   if (loading) {
     return <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" /></div>;
   }
@@ -56,6 +83,51 @@ export default function PaperDetailPage() {
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-xl font-bold text-gray-900">{paper.title}</h1>
           <div className="flex gap-2 shrink-0">
+            <div className="relative">
+              <button
+                onClick={openCollectionPicker}
+                className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                title="Add to collection"
+              >
+                <FolderPlus className="h-5 w-5 text-gray-400" />
+              </button>
+
+              {/* Collection Picker Dropdown */}
+              {showCollectionPicker && (
+                <div className="absolute right-0 top-full mt-1 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100">
+                    <span className="text-sm font-medium text-gray-700">Add to Collection</span>
+                    <button onClick={() => setShowCollectionPicker(false)} className="p-0.5 hover:bg-gray-100 rounded">
+                      <X className="h-4 w-4 text-gray-400" />
+                    </button>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto">
+                    {collections.length === 0 ? (
+                      <p className="px-3 py-4 text-sm text-gray-500 text-center">No collections yet. Create one first.</p>
+                    ) : (
+                      collections.map((col) => (
+                        <button
+                          key={col.id}
+                          onClick={() => addToCollection(col.id)}
+                          disabled={addingTo === col.id}
+                          className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center justify-between text-sm"
+                        >
+                          <div>
+                            <p className="font-medium text-gray-900">{col.name}</p>
+                            <p className="text-xs text-gray-500">{col.papers_count} papers</p>
+                          </div>
+                          {addingTo === col.id ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600" />
+                          ) : (
+                            <Check className="h-4 w-4 text-gray-300" />
+                          )}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
             <button onClick={toggleBookmark} className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50">
               <Bookmark className={`h-5 w-5 ${paper.is_bookmarked ? 'fill-yellow-400 text-yellow-400' : 'text-gray-400'}`} />
             </button>

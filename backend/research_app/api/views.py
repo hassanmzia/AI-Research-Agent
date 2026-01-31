@@ -204,8 +204,14 @@ class SessionAgentLogsView(generics.ListAPIView):
 class ResearchCollectionViewSet(viewsets.ModelViewSet):
     serializer_class = ResearchCollectionSerializer
 
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            from research_app.api.serializers import ResearchCollectionDetailSerializer
+            return ResearchCollectionDetailSerializer
+        return ResearchCollectionSerializer
+
     def get_queryset(self):
-        return ResearchCollection.objects.filter(user=self.request.user)
+        return ResearchCollection.objects.filter(user=self.request.user).prefetch_related('papers')
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

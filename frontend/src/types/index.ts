@@ -115,6 +115,18 @@ export interface ResearchCollection {
   is_public: boolean;
   tags: string[];
   created_at: string;
+  papers?: Array<{
+    id: string;
+    title: string;
+    authors: Array<{ name: string; affiliation?: string } | string>;
+    source: string;
+    url: string;
+    categories: string[];
+    published_date: string | null;
+    is_bookmarked: boolean;
+    agi_score?: number | null;
+    classification?: string | null;
+  }>;
 }
 
 export interface ScheduledResearch {
