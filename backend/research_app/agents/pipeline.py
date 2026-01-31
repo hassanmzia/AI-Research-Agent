@@ -111,14 +111,36 @@ def run_pipeline(
         if not arxiv_queries:
             arxiv_queries = [_build_arxiv_query(keywords, research_objective)]
 
-        # Run multiple queries and collect all unique papers
+        # Progressive discovery: try targeted queries first, broaden if needed
+        # When using planner-generated AND queries, skip category filter (query is specific enough)
+        # Also skip date filter — relevance sort + our own filter handles quality
         all_papers = {}
         fetch_per_query = max(max_papers * 2, 20)
 
+        # Round 1: Run planner queries WITHOUT date/category filters (they're already targeted)
         for i, query in enumerate(arxiv_queries[:4]):
             log("discovery", f"Running search query {i+1}/{min(len(arxiv_queries), 4)}: {query}")
             discovery_result = discover_and_process_papers(
                 query=query,
+                max_papers=fetch_per_query,
+                from_date=None,
+                to_date=None,
+                categories=None,
+            )
+            for paper in discovery_result.get("processed_papers", []):
+                paper_id = paper.get("id", paper.get("title", ""))
+                if paper_id not in all_papers:
+                    all_papers[paper_id] = paper
+
+        # Round 2: If targeted queries returned too few, try broader keyword-based query
+        if len(all_papers) < max_papers and keywords:
+            broad_query = " OR ".join(
+                f'all:"{kw}"' if " " in kw else f"all:{kw}"
+                for kw in keywords[:5]
+            )
+            log("discovery", f"Broadening search with OR query: {broad_query}")
+            discovery_result = discover_and_process_papers(
+                query=broad_query,
                 max_papers=fetch_per_query,
                 from_date=from_date,
                 to_date=to_date,
@@ -162,7 +184,7 @@ def run_pipeline(
         result["statistics"]["discovery"] = {
             "total_fetched": len(all_papers),
             "relevance_filtered": filtered_count if filtered_count > 0 else 0,
-            "queries_run": min(len(arxiv_queries), 4),
+            "queries_run": min(len(arxiv_queries), 4) + (1 if len(all_papers) < max_papers and keywords else 0),
         }
 
         result["phases_completed"].append("discovery")
