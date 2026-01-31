@@ -3,6 +3,7 @@ Research Pipeline - Orchestrates the multi-agent workflow.
 Implements the LangGraph-style state machine from the notebook.
 """
 import logging
+import re
 import time
 from datetime import datetime
 from typing import Dict, Any, List, Callable
@@ -90,11 +91,10 @@ def run_pipeline(
         # === PHASE 2: DISCOVERY ===
         change_phase(ResearchPhase.DISCOVERY)
 
-        # Build search query from plan keywords (use all keywords, up to 8)
-        keywords = plan.get("search_keywords", [research_objective])[:8]
-        if not keywords:
-            keywords = [research_objective]
-        search_query = " OR ".join(keywords)
+        # Build search query: use the research objective directly as primary query
+        # ArXiv searches title + abstract, so the full objective gives best relevance
+        keywords = plan.get("search_keywords", [])[:8]
+        search_query = research_objective
 
         # Use user-provided categories if available, otherwise use planner's categories
         if not search_categories:
@@ -107,22 +107,52 @@ def run_pipeline(
             from_date = parts[0].strip()
             to_date = parts[1].strip()
 
+        # Fetch extra papers (3x) so we have enough after relevance filtering
+        fetch_count = max_papers * 3
+
         log("discovery", f"Searching for papers: '{search_query}' in categories: {search_categories or 'all'}")
 
         discovery_result = discover_and_process_papers(
             query=search_query,
-            max_papers=max_papers,
+            max_papers=fetch_count,
             from_date=from_date,
             to_date=to_date,
             categories=search_categories if search_categories else None,
         )
 
         papers = discovery_result.get("processed_papers", [])
+
+        # Build relevance terms from both objective and planner keywords
+        relevance_terms = _extract_relevance_terms(research_objective, keywords)
+        log("discovery", f"Relevance terms: {relevance_terms}")
+
+        # Score and filter papers for relevance to the research objective
+        scored_papers = []
+        for paper in papers:
+            score = _compute_relevance_score(paper, relevance_terms)
+            scored_papers.append((score, paper))
+
+        scored_papers.sort(key=lambda x: x[0], reverse=True)
+
+        # Keep papers with relevance score > 0, up to max_papers
+        relevant_papers = [p for score, p in scored_papers if score > 0][:max_papers]
+
+        # If we got too few relevant papers, fall back to top-scored from ArXiv
+        if len(relevant_papers) < max(3, max_papers // 2) and papers:
+            relevant_papers = [p for _, p in scored_papers[:max_papers]]
+            log("discovery", f"Low relevance matches, using top {len(relevant_papers)} by best available score", level="warning")
+
+        filtered_count = len(papers) - len(relevant_papers)
+        if filtered_count > 0:
+            log("discovery", f"Filtered out {filtered_count} irrelevant papers")
+
+        papers = relevant_papers
         result["discovered_papers"] = papers
         result["statistics"]["discovery"] = discovery_result.get("statistics", {})
+        result["statistics"]["discovery"]["relevance_filtered"] = filtered_count if filtered_count > 0 else 0
 
         result["phases_completed"].append("discovery")
-        log("discovery", f"Discovered {len(papers)} papers", papers_found=len(papers))
+        log("discovery", f"Discovered {len(papers)} relevant papers", papers_found=len(papers))
 
         if not papers:
             log("lead_supervisor", "No papers discovered, generating summary report")
@@ -184,6 +214,76 @@ def run_pipeline(
         result["errors"].append({"error": str(e), "phase": "pipeline"})
         result["statistics"]["processing_time"] = round(time.time() - start_time, 1)
         return result
+
+
+def _extract_relevance_terms(objective: str, keywords: List[str]) -> List[str]:
+    """
+    Extract meaningful multi-word and single-word terms from the objective and keywords.
+    Returns a list of lowercase terms ordered by specificity (multi-word first).
+    """
+    # Common stop words to exclude
+    stop_words = {
+        "find", "some", "papers", "on", "about", "the", "a", "an", "and", "or",
+        "for", "in", "of", "to", "with", "using", "that", "this", "from", "by",
+        "is", "are", "was", "were", "be", "been", "have", "has", "do", "does",
+        "how", "what", "which", "where", "when", "who", "research", "study",
+        "studies", "paper", "recent", "new", "novel", "based", "related",
+    }
+
+    terms = []
+
+    # Add planner keywords as-is (they're already curated phrases)
+    for kw in keywords:
+        cleaned = kw.strip().lower()
+        if cleaned and len(cleaned) > 2:
+            terms.append(cleaned)
+
+    # Extract meaningful phrases from objective (2-3 word combinations)
+    obj_lower = objective.lower()
+    words = re.findall(r'[a-z]+', obj_lower)
+    meaningful_words = [w for w in words if w not in stop_words and len(w) > 2]
+
+    # Add bigrams from meaningful words
+    for i in range(len(meaningful_words) - 1):
+        bigram = f"{meaningful_words[i]} {meaningful_words[i+1]}"
+        terms.append(bigram)
+
+    # Add individual meaningful words
+    for w in meaningful_words:
+        terms.append(w)
+
+    # Deduplicate while preserving order
+    seen = set()
+    unique_terms = []
+    for t in terms:
+        if t not in seen:
+            seen.add(t)
+            unique_terms.append(t)
+
+    return unique_terms
+
+
+def _compute_relevance_score(paper: Dict[str, Any], terms: List[str]) -> float:
+    """
+    Compute a relevance score for a paper against the search terms.
+    Higher score = more relevant.
+    Multi-word term matches are weighted higher than single-word matches.
+    """
+    title = paper.get("title", "").lower()
+    abstract = paper.get("metadata", {}).get("abstract", "").lower()
+    text = f"{title} {abstract}"
+
+    score = 0.0
+    for term in terms:
+        word_count = len(term.split())
+        if term in text:
+            if term in title:
+                # Title matches are worth more
+                score += 3.0 * word_count
+            else:
+                score += 1.5 * word_count
+
+    return score
 
 
 def _generate_no_results_report(objective: str) -> str:
