@@ -51,7 +51,7 @@ services:
     environment:
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-dev-secret-key-change-in-production}
       - DJANGO_DEBUG=${DJANGO_DEBUG:-true}
-      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,backend}
+      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,backend,demo.eminencetechsolutions.com,108.48.39.238}
       - POSTGRES_DB=${POSTGRES_DB:-ai_research}
       - POSTGRES_USER=${POSTGRES_USER:-researcher}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-secure-password-change-me}
@@ -176,7 +176,7 @@ services:
       - research-net
 
   # ============================================
-  # React Frontend
+  # React Frontend (Nginx + SSL)
   # ============================================
   frontend:
     build:
@@ -184,10 +184,13 @@ services:
       dockerfile: Dockerfile
     container_name: research-frontend
     environment:
-      - REACT_APP_API_URL=http://localhost:3046
-      - REACT_APP_WS_URL=ws://localhost:3046
+      - REACT_APP_API_URL=https://demo.eminencetechsolutions.com:3045
+      - REACT_APP_WS_URL=wss://demo.eminencetechsolutions.com:3045
+    volumes:
+      - ./ssl:/etc/nginx/ssl:ro
     ports:
-      - "3045:80"
+      - "3045:443"
+      - "3080:80"
     depends_on:
       - gateway
     networks:

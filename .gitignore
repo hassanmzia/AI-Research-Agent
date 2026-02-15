@@ -45,3 +45,9 @@ logs/
 htmlcov/
 .coverage
 coverage/
+
+# SSL certificates (keep .gitkeep)
+ssl/*.pem
+ssl/*.key
+ssl/*.crt
+ssl/*.csr
