@@ -6,16 +6,16 @@ import {
 import { AGIEvaluation } from '../types';
 
 const PARAM_LABELS: Record<string, string> = {
-  novel_problem_solving: 'Novel Problem Solving',
-  few_shot_learning: 'Few-Shot Learning',
+  novel_problem_solving: 'Problem Solving',
+  few_shot_learning: 'Few-Shot',
   task_transfer: 'Task Transfer',
-  abstract_reasoning: 'Abstract Reasoning',
-  contextual_adaptation: 'Contextual Adaptation',
-  multi_rule_integration: 'Multi-Rule Integration',
-  generalization_efficiency: 'Generalization Efficiency',
+  abstract_reasoning: 'Reasoning',
+  contextual_adaptation: 'Adaptation',
+  multi_rule_integration: 'Multi-Rule',
+  generalization_efficiency: 'Generalization',
   meta_learning: 'Meta-Learning',
-  world_modeling: 'World Modeling',
-  autonomous_goal_setting: 'Autonomous Goals',
+  world_modeling: 'World Model',
+  autonomous_goal_setting: 'Goal Setting',
 };
 
 interface Props {
@@ -30,14 +30,14 @@ export default function AGIRadarChart({ evaluation }: Props) {
   }));
 
   return (
-    <ResponsiveContainer width="100%" height={350}>
-      <RadarChart data={data}>
+    <ResponsiveContainer width="100%" height={280}>
+      <RadarChart data={data} cx="50%" cy="50%" outerRadius="65%">
         <PolarGrid stroke="#e2e8f0" />
         <PolarAngleAxis
           dataKey="parameter"
-          tick={{ fontSize: 10, fill: '#64748b' }}
+          tick={{ fontSize: 9, fill: '#64748b' }}
         />
-        <PolarRadiusAxis angle={90} domain={[0, 10]} tick={{ fontSize: 9 }} />
+        <PolarRadiusAxis angle={90} domain={[0, 10]} tick={{ fontSize: 8 }} />
         <Radar
           name="AGI Score"
           dataKey="score"

@@ -88,13 +88,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 overflow-x-hidden">
         <header className="sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-3 lg:hidden">
-          <button onClick={() => setSidebarOpen(!sidebarOpen)}>
-            {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1 -ml-1 touch-manipulation">
+              {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
+            <div className="flex items-center gap-2">
+              <Brain className="h-5 w-5 text-primary-600" />
+              <span className="text-sm font-semibold text-gray-900">AI Research</span>
+            </div>
+          </div>
         </header>
-        <main className="p-4 lg:p-8 max-w-7xl mx-auto">{children}</main>
+        <main className="p-3 sm:p-4 lg:p-8 max-w-7xl mx-auto pb-safe">{children}</main>
       </div>
     </div>
   );
